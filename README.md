@@ -10,8 +10,11 @@ Script:
 
 Folder:
 1. data_csv
-      contains all of the csv files needed for the above script (ASV table, metadata, GC data, height data for 2012 data)
+
+   - contains all of the csv files needed for the above script (ASV table, metadata, GC data, height data for 2012 data)
         * height data for 2021 comes from a canopy height model from Olsoy et al work (see manuscript for details)
+   
      a. taxonomy
-       contains the fasta files pulling from remote BLAST and known taxa from previous artemisia work
+     
+       - contains the fasta files pulling from remote BLAST and known taxa from previous artemisia work
        - taxonomy.R: script showing the taxonomy assignment that was done using NCBI BLAST remotely in R
