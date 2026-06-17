@@ -1,3 +1,4 @@
+Common Garden Phyllosphere Project
 This repository contains the script for analyzing, and visualizing the fungal phyllosphere data from big sagebrush leaves from a commmon garden in Orchard, ID.
 
 The goal of this study is to investigate what host genetic factors affect the fungal phyllosphere in a common garden setting with co-occurring subspecies. We sampled sagebrush leaves from over 70 plants in both 2012 and 2021. For leaf microbial analyses we use ITS sequencing.
