@@ -1,6 +1,5 @@
-# Orchard Common Garden - Microbial & Chemistry analysis, and visualization 2026
+# Orchard Common Garden -Fungal phyllosphere analysis, and visualization 2026
 # Install and load necessary packages ####
-# library(ANCOMBC)
 library(effects)
 library(readr)
 library(dplyr)
@@ -19,7 +18,7 @@ library(metacoder)
 
 # Read in cleaned data ####
 ## METADATA
-mdITS_OCG <- read.csv("data_csv/metadata_OCG.csv",head=T, row.names = 1, check.names = F,stringsAsFactors = T) #238 of 24 vars
+mdITS_OCG <- read.csv("data_csv/metadata_OCG.csv",head=T, row.names = 1, check.names = F,stringsAsFactors = T)
 
 mdITS_OCG[, c("Ploidy", "Subspecies", "Subsp_ploidy", "Year", "Plant", "Ecoregion")] <- lapply(mdITS_OCG[, c("Ploidy", "Subspecies", "Subsp_ploidy", "Year", "Plant", "Ecoregion")], as.factor)
 
@@ -43,11 +42,11 @@ asvITS_OCG <- asvITS_OCG[!(row.names(asvITS_OCG) == "NEG_8-28-21"),]
 asvITS_OCG <- asvITS_OCG[!(row.names(asvITS_OCG) == "MTW.3.7.R_2012"),] 
 
 ## Remove consistent outlier
-asvITS_OCG <- asvITS_OCG[!(row.names(asvITS_OCG) == "UTW.1.4_2021"),] 
+asvITS_OCG <- asvITS_OCG[!(row.names(asvITS_OCG) == "UTW.1.4_2021"),]
 
 rownames(asvITS_OCG) <- sub("v[12]$", "", rownames(asvITS_OCG)) # remove v1 and v2 from sample names to match metadata, which has already been cleaned to remove v1 and v2
 
-#histogram of asv values
+#histogram of asv values to assess distribution for model selection
 # hist(rowSums(asvITS_OCG), main="Histogram of ASV counts per sample", xlab="ASV counts", breaks=20)
 
 asvITS_OCG <- subset(asvITS_OCG, row.names(asvITS_OCG) %in% row.names(mdITS_OCG)) ## 189
@@ -92,37 +91,6 @@ mdITS_2012_h <- mdITS_2012_h %>%
 
 mdITS_2012_h$Height4.12 <- as.numeric(as.character(mdITS_2012_h$Height4.12))
 rownames(mdITS_2012_h) <- mdITS_2012_h$Description
-
-# # 2015
-# canopy_2015 <-st_read("data_csv/shp_files/orchard_digitized_2015_v1.shp")
-# # plot(canopy_2015$geometry)
-# 
-# chm_2015 <- rast("data_csv/shp_files/orchard2015_chm_IDTM_clip2_3cm.tif")
-# # plot(chm_2015)
-# # plot(st_geometry(canopy_2015), add = TRUE)
-# 
-# canopy_2015 <- st_set_crs(canopy_2015, st_crs(chm_2015))
-# 
-# st_crs(canopy_2015) # check the coordinate reference system of the shapefile
-# st_crs(chm_2015) # check the coordinate reference system of the raster
-# 
-# canopy_vect_2015 <- vect(canopy_2015)
-# 
-# extracted_2015 <- extract(chm_2015, canopy_vect_2015, fun = NULL, ID = TRUE)
-# 
-# # Map the real plant IDs onto the row index
-# extracted_2015$plant_id <- canopy_2015$Plant_ID[extracted_2015$ID]
-# str(extracted_2015)
-# 
-# # remove row with plant id 1 
-# extracted_2015 <- extracted_2015[extracted_2015$plant_id != 1, ]
-# 
-# height_stats_2015 <- extracted_2015 %>%
-#   dplyr::group_by(plant_id) %>%
-#   dplyr::summarise(
-#     mean_height_2015 = mean(orchard2015_chm_IDTM_clip2_3cm, na.rm = TRUE),
-#     max_height_2015  = max(orchard2015_chm_IDTM_clip2_3cm, na.rm = TRUE)
-#   )
 
 # canopy height data read in from 2019
 canopy_2019 <-st_read("data_csv/shp_files/orchard_digitized_2019_v1_wgs84utm.shp")
@@ -169,17 +137,6 @@ mdITS_2021_h <- mdITS_2021_h %>%
 mdITS_2021_h <- mdITS_2021_h[!is.na(mdITS_2021_h$max_height_2019), ] # 47 
 rownames(mdITS_2021_h) <- mdITS_2021_h$Description
 
-# combine md: now it includes the height data 
-# mdITS_OCG_h <- mdITS_OCG %>%
-#   left_join(height_stats_2015 %>% 
-#               dplyr::rename(mean_height_2015 = mean_height_2015,
-#                             max_height_2015 = max_height_2015),
-#             by = c("Garden Plant ID" = "plant_id")) %>%
-#   left_join(height_stats_2019 %>%
-#               dplyr::rename(mean_height_2019 = mean_height_2019,
-#                             max_height_2019 = max_height_2019),
-#             by = c("Garden Plant ID" = "plant_id")) # 146 
-
 # Read in GC chemistry 
 OCG_GC_2012 <- read.csv("data_csv/OCG_GC_2012_thresholded.csv", head=T, row.names = 1, check.names = F, stringsAsFactors = F) # 154 of 51 vars
 OCG_GC_2021 <- read.csv("data_csv/OCG_GC_2021_thresholded.csv", head=T, row.names = 1, check.names = F, stringsAsFactors = F) # 70 of 45 vars
@@ -196,8 +153,8 @@ summary(rowSums(asvITS_OCG.r)) #500
 asvITS_OCG.richness <- specnumber(asvITS_OCG.r)
 mdITS_OCG <- cbind(mdITS_OCG, richness = asvITS_OCG.richness)
 
-hist(asvITS_OCG.richness, main="Histogram of ASV richness", xlab="ASV richness", breaks=20) # check distribution for model family choice
-glm.OCG <- glm.nb(richness ~ Year, data=mdITS_OCG)
+# hist(asvITS_OCG.richness, main="Histogram of ASV richness", xlab="ASV richness", breaks=20) # check distribution for model family choice
+glm.OCG <- glm(richness ~ Year, data=mdITS_OCG, family = poisson)
 summary(glm.OCG) 
 sum(residuals(glm.OCG, type = "pearson")^2) / df.residual(glm.OCG) # check for overdispersion 
 
@@ -235,7 +192,7 @@ glm.OCG_2021 <- glm.nb(
 )
 summary(glm.OCG_2021)
 
-# supplementary figure - ASV richness by subspecies ploidy for 2021
+# supplementary figure 2A - ASV richness by subspecies ploidy for 2021
 ggplot(mdITS_2021_h, aes(x=Subsp_ploidy, y=richness_2021)) +
   geom_violin(aes(fill = Subsp_ploidy)) +
   geom_jitter() +
@@ -251,7 +208,6 @@ asvITS_OCG_2012.dispersion <- betadisper(
 )
 anova(asvITS_OCG_2012.dispersion) # sig
 TukeyHSD(asvITS_OCG_2012.dispersion)
-plot(asvITS_OCG_2012.dispersion)
 
 asvITS_OCG_2021.dispersion <- betadisper(
   vegdist(asvITS.2021_h.r, method = "bray"),
@@ -259,7 +215,6 @@ asvITS_OCG_2021.dispersion <- betadisper(
 )
 anova(asvITS_OCG_2021.dispersion) # sig 
 TukeyHSD(asvITS_OCG_2021.dispersion)
-plot(asvITS_OCG_2021.dispersion)
 
 #Beta diversity - NMDS plots#### 
 set.seed(23)
@@ -378,8 +333,8 @@ prep_asv_barplot <- function(asv_mat, top_frac = 0.5) {
   rbind(top_asvs, Other = other)
 }
 
-asv_bar_2012 <- prep_asv_barplot(asvITS.2012_h.r, top_frac = 0.5) # 49 and 103
-asv_bar_2021 <- prep_asv_barplot(asvITS.2021_h.r, top_frac = 0.5) # 24 and 49
+asv_bar_2012 <- prep_asv_barplot(asvITS.2012_h.r, top_frac = 0.5) 
+asv_bar_2021 <- prep_asv_barplot(asvITS.2021_h.r, top_frac = 0.5)
 
 reshape_asv_bar <- function(asv_bar, metadata, year_label,
                             id_col, group_col, plant_col) {
@@ -408,31 +363,32 @@ reshape_asv_bar <- function(asv_bar, metadata, year_label,
 rownames(mdITS_2012_h) <- mdITS_2012_h$Description
 rownames(mdITS_2021_h) <- mdITS_2021_h$Description
 
-# Adjust id_col and group_col to match your actual metadata column names
-df_2012 <- reshape_asv_bar(asv_bar_2012, mdITS_2012_h, "2012", 
-                           id_col = "Description",      # your actual ID column name
+# Adjust id_col and group_col to match metadata column names
+bar_2012 <- reshape_asv_bar(asv_bar_2012, mdITS_2012_h, "2012", 
+                           id_col = "Description",      
                            group_col = "Subsp_ploidy",
-                           plant_col = "Plant") # your actual group column name
+                           plant_col = "Plant") 
 
-df_2021 <- reshape_asv_bar(asv_bar_2021, mdITS_2021_h, "2021",
+bar_2021 <- reshape_asv_bar(asv_bar_2021, mdITS_2021_h, "2021",
                            id_col = "Description",
                            group_col = "Subsp_ploidy",
                            plant_col = "Plant")
 
-df_all <- bind_rows(df_2012, df_2021)
+bar_all <- bind_rows(bar_2012, bar_2021)
 
-# See which SampleIDs are coming up as NA
-df_all %>% 
+# SampleIDs have sometimes come up as NA double check
+bar_all %>% 
   filter(is.na(Subsp_ploidy)) %>% 
   pull(SampleID) %>% 
   unique()
 
-df_all <- df_all %>%
+bar_all <- bar_all %>%
   mutate(Subsp_ploidy = case_when(
     SampleID == "ORTV.2.4_2012" ~ "T_2n",
-    TRUE ~ Subsp_ploidy                      # keep everything else as is
+    TRUE ~ Subsp_ploidy                      
   ))
 
+# fix names
 tax_labels <- tax.ITS.OCG.p %>%
   rownames_to_column("ASV") %>%
   mutate(tax_label = case_when(
@@ -444,56 +400,29 @@ tax_labels <- tax.ITS.OCG.p %>%
   )) %>%
   dplyr::select(ASV, tax_label)
 
-# Rejoin to df_all
-df_all <- df_all %>%
+# rejoin to bar_all
+bar_all <- bar_all %>%
   left_join(tax_labels, by = "ASV") %>%
   mutate(tax_label = ifelse(ASV == "Other", "Other", tax_label))
 
-df_all <- df_all %>%
+bar_all <- bar_all %>%
   mutate(tax_label = case_when(
-    tax_label == "Unknown" ~ "Other",      # merge Unknown into Other
+    tax_label == "Unknown" ~ "Other",      # merge Unknown with Other
     ASV == "Other" ~ "Other",
     TRUE ~ tax_label
   ))
 
-# all_asvs <- unique(df_all$ASV)
-# n_total <- length(all_asvs)
-# asv_colors <- setNames(colorRampPalette(customcol)(n_total), all_asvs)
-
 customcol <- c("gray", "#c969a1", "#859b6c", "#ce4441","#62929a","#ee8577", "#004163", "#eb7926", "#b695bc", "#ffbb44")
 
-all_labels <- unique(df_all$tax_label)
+all_labels <- unique(bar_all$tax_label)
 asv_colors <- setNames(colorRampPalette(customcol)(length(all_labels)), all_labels)
 asv_colors[grep("Other", names(asv_colors))] <- "grey70"
 
-ggplot(df_all, aes(x = SampleID, y = Abundance, fill = tax_label)) +
-  geom_bar(stat = "identity", position = "fill", width = 0.9) +
-  scale_fill_manual(values = asv_colors) +
-  scale_y_continuous(labels = scales::percent_format()) +
-  facet_grid(Year ~ Subsp_ploidy,
-             scales = "free_x",
-             space = "free_x") + 
-  labs(y = "Relative Abundance",
-       x = NULL,
-       fill = "Genus") +
-  theme_classic() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 5),
-    axis.text.y = element_text(size = 7),
-    strip.text.x = element_text(angle = 0, size = 7, face = "bold"),
-    strip.text.y = element_text(size = 10, face = "bold"),
-    strip.background = element_rect(fill = "grey90", color = NA),
-    legend.text = element_text(size = 5),
-    legend.key.size = unit(0.3, "cm"),
-    panel.spacing = unit(0.2, "lines")
-  ) +
-  guides(fill = guide_legend(ncol = 2))
-
-# Calculate total abundance per tax_label for ordering
-df_all <- df_all %>%
+# calc total abundance per tax_label for ordering
+bar_all <- bar_all %>%
   mutate(tax_label = as.character(tax_label))
 
-label_summary <- df_all %>%
+label_summary <- bar_all %>%
   filter(tax_label != "Other") %>%
   group_by(tax_label) %>%
   summarise(total = sum(Abundance)) %>%
@@ -501,19 +430,17 @@ label_summary <- df_all %>%
 
 label_order <- label_summary$tax_label
 
-# Put Other at the top (it will appear at bottom of stacked bar)
 label_order <- c("Other", label_order)
 
-# Apply factor ordering
-df_all <- df_all %>%
+bar_all <- bar_all %>%
   mutate(tax_label = factor(tax_label, levels = label_order))
 
-# Update colors to match new order
+# need colors to match new order
 asv_colors <- setNames(colorRampPalette(customcol)(length(label_order)), label_order)
 asv_colors["Other"] <- "grey70"
 
-# Replot
-barchart_figure <- ggplot(df_all, aes(x = Plant, y = Abundance, fill = tax_label)) +
+# plot supplementary figure 3
+barchart_figure <- ggplot(bar_all, aes(x = Plant, y = Abundance, fill = tax_label)) +
   geom_bar(stat = "identity", position = "fill", width = 0.9) +
   scale_fill_manual(values = customcol) +
   scale_y_continuous(labels = scales::percent_format()) +
@@ -721,6 +648,7 @@ range(obj$data$diff_table$wilcox_p_value, finite = TRUE)
 
 # Procrustes for GC and fungal data####
 # 2012 procrustes for GC and fungi
+# read in the full GC data 
 asvITS_OCG_GC_2012.r <- subset(asvITS.2012_h.r, row.names(asvITS.2012_h.r) %in% row.names(OCG_GC_2012)) 
 OCG_GC_2012_asv <- subset(OCG_GC_2012, row.names(OCG_GC_2012) %in% row.names(asvITS_OCG_GC_2012.r)) # 96
 
@@ -730,13 +658,16 @@ asvITS_OCG_GC_2012.r <- asvITS_OCG_GC_2012.r[order(row.names(asvITS_OCG_GC_2012.
 
 row.names(OCG_GC_2012_asv) == row.names(asvITS_OCG_GC_2012.r) # sanity check: TRUE
 
-# make nas zeros
-OCG_GC_2012_asv <- scale(OCG_GC_2012_asv)
+# # make nas zeros
 OCG_GC_2012_asv[is.na(OCG_GC_2012_asv)] <- 0
+OCG_GC_2012_asv <- scale(OCG_GC_2012_asv)
 
 procrustes_nmds_fungi_2012 <- vegdist(asvITS_OCG_GC_2012.r, method = "bray")
 procrustes_gc_2012 <- vegdist(OCG_GC_2012_asv, method = "euclidean")
-pro_gc_fun_2012 <- protest(procrustes_nmds_fungi_2012, procrustes_gc_2012, permutations = 999)
+pro_gc_fun_2012 <- protest(procrustes_gc_2012, procrustes_nmds_fungi_2012, permutations = 999)
+
+# # save procrustes results
+# saveRDS(pro_gc_fun_2012, file = "data_csv/procrustes results/pro_gc_fun_2012.rds")
 
 # 2021 procrustes for GC 
 asvITS_OCG_GC_2021.r <- subset(asvITS.2021_h.r, row.names(asvITS.2021_h.r) %in% row.names(OCG_GC_2021)) 
