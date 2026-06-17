@@ -9,6 +9,7 @@ library(ggplot2)
 library(vegan)
 library(pairwiseAdonis)
 library(lme4)
+library(MASS)
 library(qiime2R)
 library(ggthemes)
 library(sf)
@@ -312,9 +313,6 @@ asvITS.2012.height <- adonis2(
 asvITS.2012.subsp.pw <- pairwise.adonis(asvITS.2012_h.r, mdITS_2012_h$Subsp_ploidy, p.adjust.m = 'holm')
 
 # ## 2021 asv NMDS ####
-asvITS.2021_h.r <- subset(asvITS_OCG.r, mdITS_2021_h$Year=="2021") #49 of 769 var 
-mdITS_2021_h <- subset(mdITS_2021_h, row.names(mdITS_2021_h) %in% row.names(asvITS.2021_h.r)) # 49
-
 # NMDS for height 
 set.seed(93)
 asvITS.2021_h.nmds <- suppressWarnings(metaMDS(asvITS.2021_h.r, trymax = 500)) ###solution reached! 
@@ -383,19 +381,27 @@ prep_asv_barplot <- function(asv_mat, top_frac = 0.5) {
 asv_bar_2012 <- prep_asv_barplot(asvITS.2012_h.r, top_frac = 0.5) # 49 and 103
 asv_bar_2021 <- prep_asv_barplot(asvITS.2021_h.r, top_frac = 0.5) # 24 and 49
 
-reshape_asv_bar <- function(asv_bar, metadata, year_label, id_col, group_col) {
+reshape_asv_bar <- function(asv_bar, metadata, year_label,
+                            id_col, group_col, plant_col) {
+  
   as.data.frame(t(asv_bar)) %>%
     rownames_to_column("SampleID") %>%
     left_join(
-      metadata %>% 
-        dplyr::select(all_of(c(id_col, group_col))) %>%
-        dplyr::rename(SampleID = all_of(id_col), 
-                      Subsp_ploidy = all_of(group_col)),
-      by = "SampleID") %>%
-    pivot_longer(-c(SampleID, Subsp_ploidy),
-                 names_to = "ASV",
-                 values_to = "Abundance") %>%
-    dplyr::mutate(Year = year_label)
+      metadata %>%
+        dplyr::select(all_of(c(id_col, group_col, plant_col))) %>%
+        dplyr::rename(
+          SampleID = all_of(id_col),
+          Subsp_ploidy = all_of(group_col),
+          Plant = all_of(plant_col)
+        ),
+      by = "SampleID"
+    ) %>%
+    pivot_longer(
+      -c(SampleID, Subsp_ploidy, Plant),
+      names_to = "ASV",
+      values_to = "Abundance"
+    ) %>%
+    mutate(Year = year_label)
 }
 
 # make Description column row names in my metadata sets 
@@ -405,11 +411,13 @@ rownames(mdITS_2021_h) <- mdITS_2021_h$Description
 # Adjust id_col and group_col to match your actual metadata column names
 df_2012 <- reshape_asv_bar(asv_bar_2012, mdITS_2012_h, "2012", 
                            id_col = "Description",      # your actual ID column name
-                           group_col = "Subsp_ploidy") # your actual group column name
+                           group_col = "Subsp_ploidy",
+                           plant_col = "Plant") # your actual group column name
 
 df_2021 <- reshape_asv_bar(asv_bar_2021, mdITS_2021_h, "2021",
                            id_col = "Description",
-                           group_col = "Subsp_ploidy")
+                           group_col = "Subsp_ploidy",
+                           plant_col = "Plant")
 
 df_all <- bind_rows(df_2012, df_2021)
 
@@ -505,7 +513,7 @@ asv_colors <- setNames(colorRampPalette(customcol)(length(label_order)), label_o
 asv_colors["Other"] <- "grey70"
 
 # Replot
-barchart_figure <- ggplot(df_all, aes(x = SampleID, y = Abundance, fill = tax_label)) +
+barchart_figure <- ggplot(df_all, aes(x = Plant, y = Abundance, fill = tax_label)) +
   geom_bar(stat = "identity", position = "fill", width = 0.9) +
   scale_fill_manual(values = customcol) +
   scale_y_continuous(labels = scales::percent_format()) +
@@ -527,9 +535,6 @@ barchart_figure <- ggplot(df_all, aes(x = SampleID, y = Abundance, fill = tax_la
     panel.spacing = unit(0.2, "lines")
   ) +
   guides(fill = guide_legend(ncol = 2))
-
-# Save plots with specified size and resolution
-# ggsave(filename = "barchart_figure2.jpg", plot = barchart_figure, dpi = 500, width=1200, height=683, units = "px")
 
 #METACODER ####
 # 2012 SUBSPECIES PLOIDY HEATMAP
